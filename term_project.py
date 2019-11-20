@@ -19,6 +19,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
+from imblearn.over_sampling import ADASYN, SMOTE
 #why are they here 
 
 from sklearn.tree import DecisionTreeClassifier
@@ -27,6 +28,19 @@ from sklearn.svm import SVC
 import seaborn as sns
 
 if __name__ == "__main__": 
+    '''
+    Variables 
+    To 
+    Change 
+    Between
+    Runs
+    '''
+    validation_size = 0.10
+    seed = 58
+    neighbhors = 10
+    splits =15
+
+
     # Load dataset
     url = "./krkopt.csv"
     names = ["White-King-Col", "White-King-Row", "White-Rook-Col", "White-Rook-Row","Black-King-Col", "Black-King-Row","Moves till Checkmate" ]
@@ -35,6 +49,12 @@ if __name__ == "__main__":
     
     descriptiveFeats = array[:,0:6]
     targetFeats = array[:,6]
+    sm = SMOTE(random_state=seed)
+    
+    descriptiveFeats, targetFeats =sm.fit_resample(descriptiveFeats,targetFeats)
+
+    #ada = ADASYN(sampling_strategy= 'not majority', random_state=seed,n_neighbors=neighbhors,ratio='not majority')
+    #descriptiveFeats, targetFeats = ada.fit_resample( descriptiveFeats ,targetFeats )
     '''
     Visualize
     And
@@ -59,17 +79,7 @@ if __name__ == "__main__":
     dataset.hist()
     plt.show()
 
-    '''
-    Variables 
-    To 
-    Change 
-    Between
-    Runs
-    '''
-    validation_size = 0.10
-    seed = 58
-    neighbhors = 10
-    splits =15
+
 
     desc_train, desc_validation, targ_train, targ_validation = model_selection.train_test_split(descriptiveFeats, targetFeats, test_size=validation_size, random_state=seed,stratify=targetFeats)
 
@@ -82,6 +92,19 @@ if __name__ == "__main__":
     models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,p=1 )))
     models.append(("Gaussian Bayes", GaussianNB()))
 
+    # evaluate each model in turn
+    results = []
+    names = []
+    for name, model in models:
+        models
+        kfold = model_selection.StratifiedKFold(n_splits=splits, shuffle=True, random_state=seed)
+        cv_results = model_selection.cross_val_score(model, desc_train, targ_train, cv=kfold, scoring=scoring)
+        results.append(cv_results)
+        names.append(name)
+        msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+        print(msg)
+
+
     for name, model in models: 
         print("-----{}------".format(name))
         model.fit(desc_train,targ_train)
@@ -90,16 +113,3 @@ if __name__ == "__main__":
         print(confusion_matrix(targ_validation, predictions))
         print(classification_report(targ_validation, predictions))
         print()
-
-    # # evaluate each model in turn
-    # results = []
-    # names = []
-    # for name, model in models:
-    #     models
-    #     kfold = model_selection.StratifiedKFold(n_splits=splits, shuffle=True, random_state=seed)
-    #     cv_results = model_selection.cross_val_score(model, desc_train, targ_train, cv=kfold, scoring=scoring)
-    #     results.append(cv_results)
-    #     names.append(name)
-    #     msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
-    #     print(msg)
-
