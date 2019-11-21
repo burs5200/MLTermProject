@@ -28,16 +28,55 @@ from sklearn.svm import SVC
 import seaborn as sns
 from math import sqrt
 
-def chessMoves(x, y ):
-    movesAway= 0 
-    #kings use euclidian
-    movesAway+= sqrt((x[0]-y[0])**2 + (x[1]-y[1])**2 + (x[4]-y[4])**2 + (x[5]-y[5])**2)
-    if (x[3] != y[3]): 
-        movesAway +=1 
-    if (x[4] != y[4]): 
-        movesAway +=1 
-    return movesAway
+def findOptimalK(desc_train,targ_train):
+    scoring = 'accuracy'
+    i_array = list()
+    euclid = list()
+    euclid_W = list()
+    manhattan = list()
+    manhattan_W = list()
+    Gaussian = list()
+    for i in range(1,10):
+        models =[]
+        models.append(('KNN-Euclid', KNeighborsClassifier(n_neighbors=i, p=2)))
+        models.append(("KNN-Euclid-Weighted", KNeighborsClassifier(n_neighbors=i,weights='distance',p=2 )))
+        models.append(('KNN-Manhattan', KNeighborsClassifier(n_neighbors=i, p=1)))
+        models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=i,weights='distance',p=1 )))    
+        #models.append(("Gaussian Bayes", GaussianNB()))
 
+        # evaluate each model in turn
+        results = []
+        names = []
+        for name, model in models:
+            models
+            kfold = model_selection.StratifiedKFold(n_splits=splits, shuffle=True, random_state=seed)
+            cv_results = model_selection.cross_val_score(model, desc_train, targ_train, cv=kfold, scoring=scoring)
+            results.append(cv_results)
+            names.append(name)
+            msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+            print(msg)
+            print("-")
+            if name == 'KNN-Euclid': 
+                euclid.append( cv_results.mean())
+            elif name == "KNN-Euclid-Weighted": 
+                euclid_W.append( cv_results.mean())
+            elif name == 'KNN-Manhattan': 
+                manhattan.append( cv_results.mean())
+            elif name == 'KNN-Manhattan-Weighted': 
+                manhattan_W.append( cv_results.mean())
+            # elif name == 'Gaussian Bayes': 
+            #     Gaussian.append( cv_results.mean())
+                        
+
+    plt.plot(i,euclid)
+    plt.plot(i,euclid_W)
+    plt.plot(i,manhattan)
+    plt.plot(i,manhattan_W)
+    plt.plot(i,Gaussian)
+
+    plt.legend('Euclidian','Weighted Euclidian','Manhattan', 'Manhattan Weighted', 'Guassian',loc='upper left')
+
+    plt.show()
 
 if __name__ == "__main__": 
     '''
@@ -47,10 +86,10 @@ if __name__ == "__main__":
     Between
     Runs
     '''
-    validation_size = 0.001
+    validation_size = 0.1
     seed = 58
     neighbhors = 10
-    splits =15
+    splits =10
 
 
     # Load dataset
@@ -65,8 +104,6 @@ if __name__ == "__main__":
     sm = SMOTE(random_state=seed)
     descriptiveFeats, targetFeats =sm.fit_resample(descriptiveFeats,targetFeats)
 
-    #ada = ADASYN(sampling_strategy= 'all', random_state=seed,n_neighbors=neighbhors,ratio='all')
-    #descriptiveFeats, targetFeats = ada.fit_resample( descriptiveFeats ,targetFeats )
     '''
     Visualize
     And
@@ -82,10 +119,10 @@ if __name__ == "__main__":
     print(dataset.describe())
 
     print("----------------------------------")
-    # class distribution
+    #class distribution
     print(dataset.groupby('Moves till Checkmate').size())
 
-    # box and whisker plots
+    #box and whisker plots
     dataset.plot(kind='box', subplots=True, layout=(3,2), sharex=False, sharey=False)
     plt.show()
     dataset.hist()
@@ -95,16 +132,11 @@ if __name__ == "__main__":
 
     desc_train, desc_validation, targ_train, targ_validation = model_selection.train_test_split(descriptiveFeats, targetFeats, test_size=validation_size, random_state=seed,stratify=targetFeats)
 
-    scoring = 'accuracy'
-
     models =[]
     models.append(('KNN-Euclid', KNeighborsClassifier(n_neighbors=neighbhors, p=2)))
     models.append(("KNN-Euclid-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance',p=2 )))
     models.append(('KNN-Manhattan', KNeighborsClassifier(n_neighbors=neighbhors, p=1)))
-    models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance',p=1 )))
-    models.append(('KNN-Custom Distance', KNeighborsClassifier(n_neighbors=neighbhors, p=1,metric=chessMoves)))
-    models.append(("KNN-Custom-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance', p=1 ,metric=chessMoves)))
-        
+    models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance',p=1 )))    
     models.append(("Gaussian Bayes", GaussianNB()))
 
     # evaluate each model in turn
@@ -118,6 +150,7 @@ if __name__ == "__main__":
         names.append(name)
         msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
         print(msg)
+
 
 
     for name, model in models: 
