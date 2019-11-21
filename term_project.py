@@ -26,6 +26,18 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.svm import SVC
 import seaborn as sns
+from math import sqrt
+
+def chessMoves(x, y ):
+    movesAway= 0 
+    #kings use euclidian
+    movesAway+= sqrt((x[0]-y[0])**2 + (x[1]-y[1])**2 + (x[4]-y[4])**2 + (x[5]-y[5])**2)
+    if (x[3] != y[3]): 
+        movesAway +=1 
+    if (x[4] != y[4]): 
+        movesAway +=1 
+    return movesAway
+
 
 if __name__ == "__main__": 
     '''
@@ -35,7 +47,7 @@ if __name__ == "__main__":
     Between
     Runs
     '''
-    validation_size = 0.10
+    validation_size = 0.001
     seed = 58
     neighbhors = 10
     splits =15
@@ -49,11 +61,11 @@ if __name__ == "__main__":
     
     descriptiveFeats = array[:,0:6]
     targetFeats = array[:,6]
+
     sm = SMOTE(random_state=seed)
-    
     descriptiveFeats, targetFeats =sm.fit_resample(descriptiveFeats,targetFeats)
 
-    #ada = ADASYN(sampling_strategy= 'not majority', random_state=seed,n_neighbors=neighbhors,ratio='not majority')
+    #ada = ADASYN(sampling_strategy= 'all', random_state=seed,n_neighbors=neighbhors,ratio='all')
     #descriptiveFeats, targetFeats = ada.fit_resample( descriptiveFeats ,targetFeats )
     '''
     Visualize
@@ -87,9 +99,12 @@ if __name__ == "__main__":
 
     models =[]
     models.append(('KNN-Euclid', KNeighborsClassifier(n_neighbors=neighbhors, p=2)))
-    models.append(("KNN-Euclid-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,p=2 )))
+    models.append(("KNN-Euclid-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance',p=2 )))
     models.append(('KNN-Manhattan', KNeighborsClassifier(n_neighbors=neighbhors, p=1)))
-    models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,p=1 )))
+    models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance',p=1 )))
+    models.append(('KNN-Custom Distance', KNeighborsClassifier(n_neighbors=neighbhors, p=1,metric=chessMoves)))
+    models.append(("KNN-Custom-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance', p=1 ,metric=chessMoves)))
+        
     models.append(("Gaussian Bayes", GaussianNB()))
 
     # evaluate each model in turn
