@@ -18,9 +18,10 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from imblearn.over_sampling import ADASYN, SMOTE
 from sklearn.model_selection import GridSearchCV
+from sklearn import tree
 import numpy as np
 from math import sqrt
-
+from sklearn.model_selection import cross_val_predict
 
 def VisualizeDataset(dataset): 
     '''
@@ -51,7 +52,7 @@ def VisualizeDataset(dataset):
     pandas.plotting.scatter_matrix(dataset,  figsize=(6, 6))
     plt.show()
 
-def plotOptimalK(desc_train,targ_train,splits):
+def plotOptimalK(desc_train,targ_train):
     scoring = 'accuracy'
     i_array = list()
     euclid = list()
@@ -59,17 +60,22 @@ def plotOptimalK(desc_train,targ_train,splits):
     manhattan = list()
     manhattan_W = list()
     Gaussian = list()
-    for i in range(1,50):
+    mink = list()
+    minkW=list()
+    splits =100
+    for i in range(1,25):
         models =[]
         models.append(('KNN-Euclid', KNeighborsClassifier(n_neighbors=i, p=2)))
         models.append(("KNN-Euclid-Weighted", KNeighborsClassifier(n_neighbors=i,weights='distance',p=2 )))
         models.append(('KNN-Manhattan', KNeighborsClassifier(n_neighbors=i, p=1)))
         models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=i,weights='distance',p=1 )))    
         #models.append(("Gaussian Bayes", GaussianNB()))
+        #models.append(("ID3"),tree.DecisionTreeClassifier())
 
         # evaluate each model in turn
         results = []
         names = []
+        
         for name, model in models:
             models
             kfold = model_selection.StratifiedKFold(n_splits=splits,  random_state=seed)
@@ -87,6 +93,10 @@ def plotOptimalK(desc_train,targ_train,splits):
                 manhattan.append( cv_results.mean())
             elif name == 'KNN-Manhattan-Weighted': 
                 manhattan_W.append( cv_results.mean())
+            elif name == 'KNN-Mikowski (8)': 
+                mink.append( cv_results.mean())
+            elif name == 'KNN-Mikowski (8)-Weighted': 
+                minkW.append( cv_results.mean())
             # elif name == 'Gaussian Bayes': 
             #     Gaussian.append( cv_results.mean())
         
@@ -96,7 +106,8 @@ def plotOptimalK(desc_train,targ_train,splits):
     plt.plot(i_array,euclid_W, label= 'Euclidian Weighted')
     plt.plot(i_array,manhattan, label= 'Manhattan ')
     plt.plot(i_array,manhattan_W, label= 'Manhattan Weighted')
-
+    plt.plot(i_array,mink, label= 'Mikowski (8) ')
+    plt.plot(i_array,minkW, label= 'Mikowski (8)-Weighted')
     plt.legend( loc='upper left')
     plt.title("Accuracy per (K)")
     plt.xlabel("K values")
@@ -134,17 +145,24 @@ if __name__ == "__main__":
     Summarize
     The Dataset
     '''
-    VisualizeDataset(dataset)
+    #VisualizeDataset(dataset)
+    '''
+    cross_val_score
+    only takes one value 
+    for 'scoring'
+    since the code is already computationally expensive,
+     ive decided to leave both scoring metrics here and can alternate between the two by commenting them in/out rather than looping.
+    '''
+    #scoring = 'accuracy'
+    scoring = 'balanced_accuracy'
 
-    scoring = 'accuracy'
-    #desc_train, desc_validation, targ_train, targ_validation = model_selection.train_test_split(descriptiveFeats, targetFeats, test_size=validation_size, random_state=seed,stratify=targetFeats)
     
     '''
     Find
     Optimal 
     K
     '''
-    #findOptimalK(desc_train,targ_train)
+    #plotOptimalK(descriptiveFeats,targetFeats)
     
     
     
@@ -152,26 +170,29 @@ if __name__ == "__main__":
     models.append(('KNN-Euclid', KNeighborsClassifier(n_neighbors=neighbhors, p=2)))
     models.append(("KNN-Euclid-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance',p=2 )))
     models.append(('KNN-Manhattan', KNeighborsClassifier(n_neighbors=neighbhors, p=1)))
-    models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance',p=1 )))    
+    models.append(("KNN-Manhattan-Weighted", KNeighborsClassifier(n_neighbors=neighbhors,weights='distance',p=1 )))
     models.append(("Gaussian Bayes", GaussianNB()))
-
+    models.append(("ID3",tree.DecisionTreeClassifier()))
     #evaluate each model in turn
     results = []
     names = []
+
     for name, model in models:
         kfold = model_selection.StratifiedKFold(n_splits=splits, shuffle=True, random_state=seed)
         cv_results = model_selection.cross_val_score(model, descriptiveFeats, targetFeats, cv=kfold, scoring=scoring)
         results.append(cv_results)
         names.append(name)
+        print("-----------------------{}-----------------------".format(name))
+        y_predictions = cross_val_predict(model,descriptiveFeats,targetFeats,cv=kfold)
+        print(accuracy_score(targetFeats, y_predictions))
+        print(confusion_matrix(targetFeats, y_predictions))
+        print(classification_report(targetFeats, y_predictions))
         msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
         print(msg)
 
-
-    # for name, model in models: 
-    #     print("-----{}------".format(name))
-    #     model.fit(desc_train,targ_train)
-    #     predictions = model.predict(desc_validation)
-    #     print(accuracy_score(targ_validation, predictions))
-    #     print(confusion_matrix(targ_validation, predictions))
-    #     print(classification_report(targ_validation, predictions))
-    #     print()
+fig = plt.figure()
+fig.suptitle('Algorithm Comparison')
+ax = fig.add_subplot(111)
+plt.boxplot(results)
+ax.set_xticklabels(names)
+plt.show()
